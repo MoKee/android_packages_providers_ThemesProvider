@@ -19,8 +19,10 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.LegacyThemeInfo;
 import android.content.pm.PackageInfo;
+import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
 import android.content.pm.ThemeInfo;
+import android.content.pm.ThemeUtils;
 import android.content.res.AssetManager;
 import android.content.res.ThemeManager;
 import android.database.Cursor;
@@ -68,6 +70,11 @@ public class ThemePackageHelper {
             insertPackageInternal(context, pi, capabilities);
         } else if (pi.legacyThemeInfos != null && pi.legacyThemeInfos.length > 0) {
             insertLegacyPackageInternal(context, pi, capabilities);
+        } else if (pi.isLegacyIconPackApk){
+            // We must be here because it is a legacy icon pack
+            capabilities = new HashMap<String, Boolean>();
+            capabilities.put(ThemesColumns.MODIFIES_ICONS, true);
+            insertLegacyIconPackInternal(context, pi, capabilities);
         }
         return true;
     }
@@ -84,6 +91,8 @@ public class ThemePackageHelper {
         values.put(ThemesColumns.DATE_CREATED, System.currentTimeMillis());
         values.put(ThemesColumns.PRESENT_AS_THEME, isPresentableTheme);
         values.put(ThemesColumns.IS_LEGACY_THEME, pi.isLegacyThemeApk);
+        values.put(ThemesColumns.IS_DEFAULT_THEME,
+                ThemeUtils.getDefaultThemePackageName(context).equals(pi.packageName) ? 1 : 0);
         values.put(ThemesColumns.LAST_UPDATE_TIME, pi.lastUpdateTime);
 
         // Insert theme capabilities
@@ -106,6 +115,8 @@ public class ThemePackageHelper {
         values.put(ThemesColumns.DATE_CREATED, System.currentTimeMillis());
         values.put(ThemesColumns.PRESENT_AS_THEME, 1);
         values.put(ThemesColumns.IS_LEGACY_THEME, pi.isLegacyThemeApk);
+        values.put(ThemesColumns.IS_DEFAULT_THEME,
+                ThemeUtils.getDefaultThemePackageName(context).equals(pi.packageName) ? 1 : 0);
         values.put(ThemesColumns.LAST_UPDATE_TIME, pi.lastUpdateTime);
 
         // Insert theme capabilities
@@ -119,6 +130,30 @@ public class ThemePackageHelper {
         context.getContentResolver().insert(ThemesColumns.CONTENT_URI, values);
     }
 
+    private static void insertLegacyIconPackInternal(Context context, PackageInfo pi,
+                                                    Map<String, Boolean> capabilities) {
+        PackageManager pm = context.getPackageManager();
+        CharSequence labelName = pm.getApplicationLabel(pi.applicationInfo);
+        if (labelName == null) labelName = context.getString(R.string.unknown_app_name);
+
+        ContentValues values = new ContentValues();
+        values.put(ThemesColumns.PKG_NAME, pi.packageName);
+        values.put(ThemesColumns.TITLE, labelName.toString());
+        values.put(ThemesColumns.AUTHOR, "");
+        values.put(ThemesColumns.DATE_CREATED, System.currentTimeMillis());
+        values.put(ThemesColumns.LAST_UPDATE_TIME, pi.lastUpdateTime);
+        values.put(ThemesColumns.IS_LEGACY_ICONPACK, 1);
+
+        // Insert theme capabilities
+        for (Map.Entry<String, Boolean> entry : capabilities.entrySet()) {
+            String component = entry.getKey();
+            Boolean isImplemented =  entry.getValue();
+            values.put(component, isImplemented);
+        }
+
+        context.getContentResolver().insert(ThemesColumns.CONTENT_URI, values);
+    }
+
     public static void updatePackage(Context context, String pkgName) throws NameNotFoundException {
         PackageInfo pi = context.getPackageManager().getPackageInfo(pkgName, 0);
         Map<String, Boolean> capabilities = getCapabilities(context, pkgName);
@@ -126,6 +161,8 @@ public class ThemePackageHelper {
             updatePackageInternal(context, pi, capabilities);
         } else if (pi.legacyThemeInfos != null && pi.legacyThemeInfos.length > 0) {
             updateLegacyPackageInternal(context, pi, capabilities);
+        } else if (pi.isLegacyIconPackApk) {
+            updateLegacyIconPackInternal(context, pi, capabilities);
         }
     }
 
@@ -140,6 +177,8 @@ public class ThemePackageHelper {
         values.put(ThemesColumns.DATE_CREATED, System.currentTimeMillis());
         values.put(ThemesColumns.PRESENT_AS_THEME, isPresentableTheme);
         values.put(ThemesColumns.IS_LEGACY_THEME, pi.isLegacyThemeApk);
+        values.put(ThemesColumns.IS_DEFAULT_THEME,
+                ThemeUtils.getDefaultThemePackageName(context).equals(pi.packageName) ? 1 : 0);
         values.put(ThemesColumns.LAST_UPDATE_TIME, pi.lastUpdateTime);
 
         String where = ThemesColumns.PKG_NAME + "=?";
@@ -157,6 +196,26 @@ public class ThemePackageHelper {
         values.put(ThemesColumns.DATE_CREATED, System.currentTimeMillis());
         values.put(ThemesColumns.PRESENT_AS_THEME, 1);
         values.put(ThemesColumns.IS_LEGACY_THEME, pi.isLegacyThemeApk);
+        values.put(ThemesColumns.IS_DEFAULT_THEME,
+                ThemeUtils.getDefaultThemePackageName(context).equals(pi.packageName) ? 1 : 0);
+        values.put(ThemesColumns.LAST_UPDATE_TIME, pi.lastUpdateTime);
+
+        String where = ThemesColumns.PKG_NAME + "=?";
+        String[] args = { pi.packageName };
+        context.getContentResolver().update(ThemesColumns.CONTENT_URI, values, where, args);
+    }
+
+    private static void updateLegacyIconPackInternal(Context context, PackageInfo pi,
+                                              Map<String, Boolean> capabilities) {
+        PackageManager pm = context.getPackageManager();
+        CharSequence labelName = pm.getApplicationLabel(pi.applicationInfo);
+        if (labelName == null) labelName = context.getString(R.string.unknown_app_name);
+
+        boolean isPresentableTheme = ThemePackageHelper.isPresentableTheme(capabilities);
+        ContentValues values = new ContentValues();
+        values.put(ThemesColumns.PKG_NAME, pi.packageName);
+        values.put(ThemesColumns.TITLE, labelName.toString());
+        values.put(ThemesColumns.DATE_CREATED, System.currentTimeMillis());
         values.put(ThemesColumns.LAST_UPDATE_TIME, pi.lastUpdateTime);
 
         String where = ThemesColumns.PKG_NAME + "=?";
