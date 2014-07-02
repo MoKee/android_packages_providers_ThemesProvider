@@ -39,7 +39,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 
-import static android.content.res.CustomTheme.HOLO_DEFAULT;
+import static android.content.res.ThemeConfig.HOLO_DEFAULT;
 
 /**
  * Helper class to populate the provider with info from the theme.
@@ -225,9 +225,6 @@ public class ThemePackageHelper {
         values.put(ThemesColumns.TITLE, labelName.toString());
         values.put(ThemesColumns.DATE_CREATED, System.currentTimeMillis());
         values.put(ThemesColumns.LAST_UPDATE_TIME, pi.lastUpdateTime);
-
-        // Insert theme capabilities
-        insertCapabilities(capabilities, values);
 
         String where = ThemesColumns.PKG_NAME + "=?";
         String[] args = { pi.packageName };
