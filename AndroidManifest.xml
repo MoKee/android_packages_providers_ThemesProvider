@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.cyanogenmod.themes.provider"
-    android:sharedUserId="org.cyanogenmod.themes"
+    android:sharedUserId="org.mokee.themes"
     android:versionCode="2"
     android:versionName="2.0" >
 
@@ -14,7 +14,7 @@
 
         <provider
             android:name="org.cyanogenmod.themes.provider.ThemesProvider"
-            android:authorities="com.cyanogenmod.themes"
+            android:authorities="com.mokee.themes"
             android:readPermission="android.permission.READ_THEMES"
             android:writePermission="android.permission.WRITE_THEMES"
             android:exported="true" />
