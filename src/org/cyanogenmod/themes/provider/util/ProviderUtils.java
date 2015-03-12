@@ -20,9 +20,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.ThemeManager;
 import android.database.Cursor;
+import android.database.sqlite.SQLiteDatabase;
 import android.net.Uri;
 import android.provider.ThemesContract;
+import android.provider.ThemesContract.MixnMatchColumns;
 import android.provider.ThemesContract.ThemesColumns;
+import org.cyanogenmod.themes.provider.ThemesOpenHelper;
 
 public class ProviderUtils {
     /**
@@ -65,6 +68,8 @@ public class ProviderUtils {
      * @return
      */
     public static int getInstallStateForTheme(Context context, String pkgName) {
+        if (context == null || pkgName == null) return ThemesColumns.InstallState.UNKNOWN;
+
         String[] projection = new String[] { ThemesColumns.INSTALL_STATE };
         String selection = ThemesColumns.PKG_NAME + "=?";
         String[] selectionArgs = new String[] { pkgName };
@@ -79,6 +84,26 @@ public class ProviderUtils {
             c.close();
         }
         return state;
+    }
+
+    public static String getCurrentThemeForComponent(Context context, String selection,
+            String[] selectionArgs) {
+        if (context == null || selection == null || selectionArgs == null) {
+            return null;
+        }
+
+        String[] projection = new String[] {MixnMatchColumns.COL_VALUE};
+        Cursor c = context.getContentResolver().query(MixnMatchColumns.CONTENT_URI,
+                projection, selection, selectionArgs, null);
+
+        String themePkgName = null;
+        if (c != null) {
+            if (c.moveToFirst()) {
+                themePkgName = c.getString(c.getColumnIndex(MixnMatchColumns.COL_VALUE));
+            }
+            c.close();
+        }
+        return themePkgName;
     }
 
     /**
