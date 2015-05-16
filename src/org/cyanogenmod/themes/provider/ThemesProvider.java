@@ -40,7 +40,6 @@ import android.provider.ThemesContract;
 import android.provider.ThemesContract.MixnMatchColumns;
 import android.provider.ThemesContract.PreviewColumns;
 import android.provider.ThemesContract.ThemesColumns;
-import android.text.TextUtils;
 import android.util.Log;
 
 import org.cyanogenmod.themes.provider.ThemesOpenHelper.MixnMatchTable;
@@ -48,6 +47,7 @@ import org.cyanogenmod.themes.provider.ThemesOpenHelper.PreviewsTable;
 import org.cyanogenmod.themes.provider.ThemesOpenHelper.ThemesTable;
 import org.cyanogenmod.themes.provider.util.ProviderUtils;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
@@ -67,6 +67,7 @@ public class ThemesProvider extends ContentProvider {
     private static final int PREVIEWS = 5;
     private static final int PREVIEWS_ID = 6;
     private static final int APPLIED_PREVIEWS = 7;
+    private static final int COMPONENTS_PREVIEWS = 8;
 
     private static final UriMatcher sUriMatcher = new UriMatcher(UriMatcher.NO_MATCH);
 
@@ -83,6 +84,7 @@ public class ThemesProvider extends ContentProvider {
         sUriMatcher.addURI(ThemesContract.AUTHORITY, "previews/", PREVIEWS);
         sUriMatcher.addURI(ThemesContract.AUTHORITY, "previews/#", PREVIEWS_ID);
         sUriMatcher.addURI(ThemesContract.AUTHORITY, "applied_previews/", APPLIED_PREVIEWS);
+        sUriMatcher.addURI(ThemesContract.AUTHORITY, "components_previews/", COMPONENTS_PREVIEWS);
     }
 
     public static void setActiveTheme(Context context, String pkgName) {
@@ -106,13 +108,23 @@ public class ThemesProvider extends ContentProvider {
             SQLiteDatabase sqlDB = mDatabase.getWritableDatabase();
 
             // Get the theme's _id and delete preview images
-            String[] columns = new String[] { ThemesColumns._ID };
+            int idx = -1;
+            String[] columns = new String[] { ThemesColumns._ID, ThemesColumns.PKG_NAME };
             Cursor c = sqlDB.query(ThemesTable.TABLE_NAME, columns, selection,
                     selectionArgs, null, null, null);
             if (c == null) return 0;
             if (c.moveToFirst()) {
+                idx = c.getColumnIndex(ThemesColumns._ID);
                 sqlDB.delete(PreviewsTable.TABLE_NAME,
-                        PreviewColumns.THEME_ID + "=" + c.getInt(0), null);
+                        PreviewColumns.THEME_ID + "=" + c.getInt(idx), null);
+
+                // Remove preview files associated with theme
+                idx = c.getColumnIndex(ThemesColumns.PKG_NAME);
+                String pkgName = c.getString(idx);
+                String filesDir = getContext().getFilesDir().getAbsolutePath();
+                String themePreviewsDir = filesDir + File.separator +
+                        PreviewGenerationService.PREVIEWS_DIR + File.separator + pkgName;
+                PreviewGenerationService.clearThemePreviewsDir(themePreviewsDir);
             }
             c.close();
 
@@ -203,7 +215,7 @@ public class ThemesProvider extends ContentProvider {
 
         SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
         SQLiteDatabase db = mDatabase.getReadableDatabase();
-
+        String groupBy = null;
         /*
          * Choose the table to query and a sort order based on the code returned for the incoming
          * URI. Here, too, only the statements for table 3 are shown.
@@ -223,6 +235,10 @@ public class ThemesProvider extends ContentProvider {
             queryBuilder.setTables(THEMES_MIXNMATCH_INNER_JOIN);
             queryBuilder.appendWhere(MixnMatchColumns.COL_KEY + "=" + uri.getLastPathSegment());
             break;
+        case COMPONENTS_PREVIEWS:
+            // COMPONENT_PREVIEWS has the same query behavior as PREVIEWS, however, it requires a
+            // groupBy parameter to be defined before doing so. Let it fall through after this.
+            groupBy = PreviewColumns.THEME_ID;
         case PREVIEWS:
             queryBuilder.setTables(THEMES_PREVIEWS_INNER_JOIN);
             break;
@@ -236,7 +252,7 @@ public class ThemesProvider extends ContentProvider {
             return null;
         }
 
-        Cursor cursor = queryBuilder.query(db, projection, selection, selectionArgs, null, null,
+        Cursor cursor = queryBuilder.query(db, projection, selection, selectionArgs, groupBy, null,
                 sortOrder);
         if (cursor != null) {
             cursor.setNotificationUri(getContext().getContentResolver(), uri);
@@ -331,36 +347,45 @@ public class ThemesProvider extends ContentProvider {
                     }
                     if (id >= 0) {
                         if (ThemesColumns.MODIFIES_STATUS_BAR.equals(component)) {
-                            sb.append(delimeter).append("(SELECT ");
-                            sb.append(TextUtils.join(",",
-                                    PreviewsTable.STATUS_BAR_PREVIEW_COLUMNS));
-                            sb.append(String.format(" FROM previews WHERE %s=%d)",
-                                    PreviewColumns.THEME_ID, id));
-                            delimeter = ",";
+                            for (String previewKey : PreviewsTable.STATUS_BAR_PREVIEW_KEYS) {
+                                sb.append(delimeter).append(String.format(
+                                        "(SELECT %s AS %s FROM previews WHERE %s=%d AND %s='%s')",
+                                        PreviewColumns.COL_VALUE, previewKey,
+                                        PreviewColumns.THEME_ID, id, PreviewColumns.COL_KEY,
+                                        previewKey));
+                                delimeter = ",";
+                            }
                         } else if (ThemesColumns.MODIFIES_ICONS.equals(component)) {
-                            sb.append(delimeter).append("(SELECT ");
-                            sb.append(TextUtils.join(",", PreviewsTable.ICON_PREVIEW_COLUMNS));
-                            sb.append(String.format(" FROM previews WHERE %s=%d)",
-                                    PreviewColumns.THEME_ID, id));
-                            delimeter = ",";
+                            for (String previewKey : PreviewsTable.ICON_PREVIEW_KEYS) {
+                                sb.append(delimeter).append(String.format(
+                                        "(SELECT %s AS %s FROM previews WHERE %s=%d AND %s='%s')",
+                                        PreviewColumns.COL_VALUE, previewKey,
+                                        PreviewColumns.THEME_ID, id, PreviewColumns.COL_KEY,
+                                        previewKey));
+                                delimeter = ",";
+                            }
                         } else if (ThemesColumns.MODIFIES_LAUNCHER.equals(component)) {
-                            sb.append(delimeter).append("(SELECT ");
-                            sb.append(String.format("%s", PreviewColumns.WALLPAPER_PREVIEW));
-                            sb.append(String.format(" FROM previews WHERE %s=%d)",
-                                    PreviewColumns.THEME_ID, id));
+                            String previewKey = PreviewColumns.KEY_WALLPAPER_PREVIEW;
+                            sb.append(delimeter).append(String.format(
+                                    "(SELECT %s AS %s FROM previews WHERE %s=%d AND %s='%s')",
+                                    PreviewColumns.COL_VALUE, previewKey, PreviewColumns.THEME_ID,
+                                    id, PreviewColumns.COL_KEY, previewKey));
                             delimeter = ",";
                         } else if (ThemesColumns.MODIFIES_NAVIGATION_BAR.equals(component)) {
-                            sb.append(delimeter).append("(SELECT ");
-                            sb.append(TextUtils.join(",",
-                                    PreviewsTable.NAVIGATION_BAR_PREVIEW_COLUMNS));
-                            sb.append(String.format(" FROM previews WHERE %s=%d)",
-                                    PreviewColumns.THEME_ID, id));
-                            delimeter = ",";
+                            for (String previewKey : PreviewsTable.NAVIGATION_BAR_PREVIEW_KEYS) {
+                                sb.append(delimeter).append(String.format(
+                                        "(SELECT %s AS %s FROM previews WHERE %s=%d AND %s='%s')",
+                                        PreviewColumns.COL_VALUE, previewKey,
+                                        PreviewColumns.THEME_ID, id, PreviewColumns.COL_KEY,
+                                        previewKey));
+                                delimeter = ",";
+                            }
                         } else if (ThemesColumns.MODIFIES_OVERLAYS.equals(component)) {
-                            sb.append(delimeter).append("(SELECT ");
-                            sb.append(PreviewColumns.STYLE_PREVIEW);
-                            sb.append(String.format(" FROM previews WHERE %s=%d)",
-                                    PreviewColumns.THEME_ID, id));
+                            String previewKey = PreviewColumns.KEY_STYLE_PREVIEW;
+                            sb.append(delimeter).append(String.format(
+                                    "(SELECT %s AS %s FROM previews WHERE %s=%d AND %s='%s')",
+                                    PreviewColumns.COL_VALUE, previewKey, PreviewColumns.THEME_ID,
+                                    id, PreviewColumns.COL_KEY, previewKey));
                             delimeter = ",";
                         }
                     }

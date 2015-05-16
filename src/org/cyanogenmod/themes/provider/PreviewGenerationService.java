@@ -27,6 +27,7 @@ import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.CompressFormat;
 import android.os.Bundle;
+import android.os.FileUtils;
 import android.provider.ThemesContract.ThemesColumns;
 import android.provider.ThemesContract.PreviewColumns;
 import android.util.Log;
@@ -41,6 +42,10 @@ import org.cyanogenmod.themes.provider.util.WallpaperPreviewGenerator;
 import org.cyanogenmod.themes.provider.util.WallpaperPreviewGenerator.WallpaperItems;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.util.ArrayList;
+import java.util.List;
 
 /*
  * Copies images from the theme APK to the local provider's cache
@@ -49,6 +54,8 @@ public class PreviewGenerationService extends IntentService {
     public static final String ACTION_INSERT = "org.cyanogenmod.themes.provider.action.insert";
     public static final String ACTION_UPDATE = "org.cyanogenmod.themes.provider.action.update";
     public static final String EXTRA_PKG_NAME = "extra_pkg_name";
+
+    public static final String PREVIEWS_DIR = "previews";
 
     private static final String TAG = PreviewGenerationService.class.getName();
 
@@ -165,65 +172,186 @@ public class PreviewGenerationService extends IntentService {
             int id = cursor.getInt(cursor.getColumnIndexOrThrow(ThemesColumns._ID));
             cursor.close();
 
-            ContentValues values = new ContentValues();
-            values.put(PreviewColumns.THEME_ID, id);
+            List<ContentValues> themeValues = new ArrayList<ContentValues>();
+            ContentValues values = null;
+            String filesDir = this.getFilesDir().getAbsolutePath();
+            String themePreviewsDir =
+                    filesDir + File.separator + PREVIEWS_DIR + File.separator + pkgName;
+            String path = null;
+            clearThemePreviewsDir(themePreviewsDir);
+
             if (items != null) {
-                values.put(PreviewColumns.STATUSBAR_BACKGROUND,
-                        getBitmapBlobPng(items.statusbarBackground));
-                values.put(PreviewColumns.STATUSBAR_BLUETOOTH_ICON,
-                        getBitmapBlobPng(items.bluetoothIcon));
-                values.put(PreviewColumns.STATUSBAR_WIFI_ICON,
-                        getBitmapBlobPng(items.wifiIcon));
-                values.put(PreviewColumns.STATUSBAR_SIGNAL_ICON,
-                        getBitmapBlobPng(items.signalIcon));
-                values.put(PreviewColumns.STATUSBAR_BATTERY_PORTRAIT,
-                        getBitmapBlobPng(items.batteryPortrait));
-                values.put(PreviewColumns.STATUSBAR_BATTERY_LANDSCAPE,
-                        getBitmapBlobPng(items.batteryLandscape));
-                values.put(PreviewColumns.STATUSBAR_BATTERY_CIRCLE,
-                        getBitmapBlobPng(items.batteryCircle));
-                values.put(PreviewColumns.STATUSBAR_CLOCK_TEXT_COLOR, items.clockColor);
-                values.put(PreviewColumns.STATUSBAR_WIFI_COMBO_MARGIN_END, items.wifiMarginEnd);
-                values.put(PreviewColumns.NAVBAR_BACKGROUND,
-                        getBitmapBlobPng(items.navbarBackground));
-                values.put(PreviewColumns.NAVBAR_BACK_BUTTON,
-                        getBitmapBlobPng(items.navbarBack));
-                values.put(PreviewColumns.NAVBAR_HOME_BUTTON,
-                        getBitmapBlobPng(items.navbarHome));
-                values.put(PreviewColumns.NAVBAR_RECENT_BUTTON,
-                        getBitmapBlobPng(items.navbarRecent));
+                path = compressAndSavePng(items.statusbarBackground, filesDir, pkgName,
+                        PreviewColumns.KEY_STATUSBAR_BACKGROUND);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STATUSBAR_BACKGROUND,
+                        path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.bluetoothIcon, filesDir, pkgName,
+                        PreviewColumns.KEY_STATUSBAR_BLUETOOTH_ICON);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STATUSBAR_BLUETOOTH_ICON,
+                        path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.wifiIcon, filesDir, pkgName,
+                        PreviewColumns.KEY_STATUSBAR_WIFI_ICON);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STATUSBAR_WIFI_ICON, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.signalIcon, filesDir, pkgName,
+                        PreviewColumns.KEY_STATUSBAR_SIGNAL_ICON);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STATUSBAR_SIGNAL_ICON,
+                        path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.batteryPortrait, filesDir, pkgName,
+                        PreviewColumns.KEY_STATUSBAR_BATTERY_PORTRAIT);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STATUSBAR_BATTERY_PORTRAIT,
+                        path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.batteryLandscape, filesDir, pkgName,
+                        PreviewColumns.KEY_STATUSBAR_BATTERY_LANDSCAPE);
+                values = createPreviewEntryString(id,
+                        PreviewColumns.KEY_STATUSBAR_BATTERY_LANDSCAPE, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.batteryCircle, filesDir, pkgName,
+                        PreviewColumns.KEY_STATUSBAR_BATTERY_CIRCLE);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STATUSBAR_BATTERY_CIRCLE,
+                        path);
+                themeValues.add(values);
+
+                values = createPreviewEntryInt(id, PreviewColumns.KEY_STATUSBAR_CLOCK_TEXT_COLOR,
+                        items.clockColor);
+                themeValues.add(values);
+
+                values = createPreviewEntryInt(id,
+                        PreviewColumns.KEY_STATUSBAR_WIFI_COMBO_MARGIN_END, items.wifiMarginEnd);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.navbarBackground, filesDir, pkgName,
+                        PreviewColumns.KEY_NAVBAR_BACKGROUND);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_NAVBAR_BACKGROUND, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.navbarBack, filesDir, pkgName,
+                        PreviewColumns.KEY_NAVBAR_BACK_BUTTON);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_NAVBAR_BACK_BUTTON, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.navbarHome, filesDir, pkgName,
+                        PreviewColumns.KEY_NAVBAR_HOME_BUTTON);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_NAVBAR_HOME_BUTTON, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(items.navbarRecent, filesDir, pkgName,
+                        PreviewColumns.KEY_NAVBAR_RECENT_BUTTON);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_NAVBAR_RECENT_BUTTON,
+                        path);
+                themeValues.add(values);
             }
             if (icons != null) {
-                values.put(PreviewColumns.ICON_PREVIEW_1, getBitmapBlobPng(icons.icon1));
-                values.put(PreviewColumns.ICON_PREVIEW_2, getBitmapBlobPng(icons.icon2));
-                values.put(PreviewColumns.ICON_PREVIEW_3, getBitmapBlobPng(icons.icon3));
+                path = compressAndSavePng(icons.icon1, filesDir, pkgName,
+                        PreviewColumns.KEY_ICON_PREVIEW_1);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_ICON_PREVIEW_1, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(icons.icon2, filesDir, pkgName,
+                        PreviewColumns.KEY_ICON_PREVIEW_2);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_ICON_PREVIEW_2, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(icons.icon3, filesDir, pkgName,
+                        PreviewColumns.KEY_ICON_PREVIEW_3);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_ICON_PREVIEW_3, path);
+                themeValues.add(values);
             }
             if (wallpaperItems != null) {
-                values.put(PreviewColumns.WALLPAPER_PREVIEW,
-                        getBitmapBlobJpg(wallpaperItems.wpPreview));
-                values.put(PreviewColumns.WALLPAPER_THUMBNAIL,
-                        getBitmapBlobPng(wallpaperItems.wpThumbnail));
-                values.put(PreviewColumns.LOCK_WALLPAPER_PREVIEW,
-                        getBitmapBlobJpg(wallpaperItems.lsPreview));
-                values.put(PreviewColumns.LOCK_WALLPAPER_THUMBNAIL,
-                        getBitmapBlobPng(wallpaperItems.lsThumbnail));
+                path = compressAndSaveJpg(wallpaperItems.wpPreview, filesDir, pkgName,
+                        PreviewColumns.KEY_WALLPAPER_PREVIEW);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_WALLPAPER_PREVIEW, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(wallpaperItems.wpThumbnail, filesDir, pkgName,
+                        PreviewColumns.KEY_WALLPAPER_THUMBNAIL);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_WALLPAPER_THUMBNAIL, path);
+                themeValues.add(values);
+
+                path = compressAndSaveJpg(wallpaperItems.lsPreview, filesDir, pkgName,
+                        PreviewColumns.KEY_LOCK_WALLPAPER_PREVIEW);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_LOCK_WALLPAPER_PREVIEW,
+                        path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(wallpaperItems.lsThumbnail, filesDir, pkgName,
+                        PreviewColumns.KEY_LOCK_WALLPAPER_THUMBNAIL);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_LOCK_WALLPAPER_THUMBNAIL,
+                        path);
+                themeValues.add(values);
             }
             if (styleItems != null) {
-                values.put(PreviewColumns.STYLE_THUMBNAIL, getBitmapBlobPng(styleItems.thumbnail));
-                values.put(PreviewColumns.STYLE_PREVIEW, getBitmapBlobPng(styleItems.preview));
+                path = compressAndSavePng(styleItems.thumbnail, filesDir, pkgName,
+                        PreviewColumns.KEY_STYLE_THUMBNAIL);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STYLE_THUMBNAIL, path);
+                themeValues.add(values);
+
+                path = compressAndSavePng(styleItems.preview, filesDir, pkgName,
+                        PreviewColumns.KEY_STYLE_PREVIEW);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_STYLE_PREVIEW, path);
+                themeValues.add(values);
             }
             if (bootAnim != null) {
-                values.put(PreviewColumns.BOOTANIMATION_THUMBNAIL, getBitmapBlobPng(bootAnim));
+                path = compressAndSavePng(bootAnim, filesDir, pkgName,
+                        PreviewColumns.KEY_BOOTANIMATION_THUMBNAIL);
+                values = createPreviewEntryString(id, PreviewColumns.KEY_BOOTANIMATION_THUMBNAIL,
+                        path);
+                themeValues.add(values);
             }
 
-            selection = PreviewColumns.THEME_ID + "=?";
-            selectionArgs = new String[] { String.valueOf(id) };
-            // Try an update first, if that returns 0 then we need to insert these values
-            if (resolver.update(
-                    PreviewColumns.CONTENT_URI, values, selection, selectionArgs) == 0) {
-                resolver.insert(PreviewColumns.CONTENT_URI, values);
+            if (!themeValues.isEmpty()) {
+                selection = PreviewColumns.THEME_ID + "=? AND " + PreviewColumns.COL_KEY + "=?";
+                for (ContentValues contentValues : themeValues) {
+                    selectionArgs = new String[]{String.valueOf(id),
+                            contentValues.getAsString(PreviewColumns.COL_KEY)};
+                    // Try an update first, if that returns 0 then we need to insert these values
+                    if (resolver.update(PreviewColumns.CONTENT_URI, contentValues, selection,
+                            selectionArgs) == 0) {
+                        resolver.insert(PreviewColumns.CONTENT_URI, contentValues);
+                    }
+                }
             }
         }
+    }
+
+    private static ContentValues createPreviewEntryInt(int id, String key, int value) {
+        ContentValues values = new ContentValues();
+        values.put(PreviewColumns.THEME_ID, id);
+        values.put(PreviewColumns.COL_KEY, key);
+        values.put(PreviewColumns.COL_VALUE, value);
+
+        return values;
+    }
+
+    private static ContentValues createPreviewEntryString(int id, String key, String value) {
+        ContentValues values = new ContentValues();
+        values.put(PreviewColumns.THEME_ID, id);
+        values.put(PreviewColumns.COL_KEY, key);
+        values.put(PreviewColumns.COL_VALUE, value);
+
+        return values;
+    }
+
+    private static String compressAndSavePng(Bitmap bmp, String baseDir, String pkgName,
+                                               String fileName) {
+        byte[] image = getBitmapBlobPng(bmp);
+        return saveCompressedImage(image, baseDir, pkgName, fileName);
+    }
+
+    private static String compressAndSaveJpg(Bitmap bmp, String baseDir, String pkgName,
+                                             String fileName) {
+        byte[] image = getBitmapBlobJpg(bmp);
+        return saveCompressedImage(image, baseDir, pkgName, fileName);
     }
 
     private static byte[] getBitmapBlobPng(Bitmap bmp) {
@@ -241,10 +369,59 @@ public class PreviewGenerationService extends IntentService {
         return out.toByteArray();
     }
 
+    private static String saveCompressedImage(byte[] image, String baseDir, String pkgName,
+                                              String fileName) {
+        // Create relevant directories
+        String previewsDir = baseDir + File.separator + PREVIEWS_DIR;
+        String pkgDir = previewsDir + File.separator + pkgName;
+        String filePath = pkgDir + File.separator + fileName;
+        createDirIfNotExists(previewsDir);
+        createDirIfNotExists(pkgDir);
+
+        // Save blob
+        FileOutputStream outputStream;
+        final File pkgPreviewDir = new File(pkgDir);
+        try {
+            File outFile = new File(pkgPreviewDir, fileName);
+            outputStream = new FileOutputStream(outFile);
+            outputStream.write(image);
+            outputStream.close();
+            FileUtils.setPermissions(outFile,
+                    FileUtils.S_IRWXU | FileUtils.S_IRWXG | FileUtils.S_IROTH,
+                    -1, -1);
+        } catch (Exception e) {
+            Log.w(TAG, "Unable to save preview " + pkgName + File.separator + fileName, e);
+            filePath = null;
+        }
+
+        return filePath;
+    }
+
+    public static void clearThemePreviewsDir(String path) {
+        File directory = new File(path);
+        FileUtils.deleteContents(directory);
+        directory.delete();
+    }
+
     private static Cursor queryTheme(Context context, String pkgName) {
         String selection = ThemesColumns.PKG_NAME + "=?";
         String[] selectionArgs = { pkgName };
         return context.getContentResolver().query(ThemesColumns.CONTENT_URI, null,
                 selection, selectionArgs, null);
+    }
+
+    private static boolean dirExists(String dirPath) {
+        final File dir = new File(dirPath);
+        return dir.exists() && dir.isDirectory();
+    }
+
+    private static void createDirIfNotExists(String dirPath) {
+        if (!dirExists(dirPath)) {
+            File dir = new File(dirPath);
+            if (dir.mkdir()) {
+                FileUtils.setPermissions(dir, FileUtils.S_IRWXU |
+                        FileUtils.S_IRWXG | FileUtils.S_IROTH | FileUtils.S_IXOTH, -1, -1);
+            }
+        }
     }
 }
