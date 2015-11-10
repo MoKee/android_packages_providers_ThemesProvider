@@ -136,7 +136,9 @@ public class ThemesProvider extends ContentProvider {
             c.close();
 
             rowsDeleted = sqlDB.delete(ThemesTable.TABLE_NAME, selection, selectionArgs);
-            getContext().getContentResolver().notifyChange(uri, null);
+            if (rowsDeleted > 0) {
+                getContext().getContentResolver().notifyChange(uri, null);
+            }
             return rowsDeleted;
         case PREVIEWS:
             sqlDB = mDatabase.getWritableDatabase();
@@ -153,6 +155,9 @@ public class ThemesProvider extends ContentProvider {
                         PreviewColumns.THEME_ID + "=" + c.getInt(idx), null);
             }
             c.close();
+            if (rowsDeleted > 0) {
+                getContext().getContentResolver().notifyChange(uri, null);
+            }
             return rowsDeleted;
         case MIXNMATCH:
             throw new UnsupportedOperationException("Cannot delete rows in MixNMatch table");
@@ -368,8 +373,10 @@ public class ThemesProvider extends ContentProvider {
                 if (component != null && pkgName != null) {
                     // We need to get the theme's id using its package name
                     String[] columns = { ThemesColumns._ID };
-                    Cursor current = db.query(ThemesTable.TABLE_NAME, columns,
-                            ThemesColumns.PKG_NAME + "='" + pkgName + "'", null, null, null, null);
+                    String selection = ThemesColumns.PKG_NAME + "=? AND " + component + "=?";
+                    String[] selectionArgs = {pkgName, "1"};
+                    Cursor current = db.query(ThemesTable.TABLE_NAME, columns, selection,
+                            selectionArgs, null, null, null);
                     int id = -1;
                     if (current != null) {
                         if (current.moveToFirst()) id = current.getInt(0);
