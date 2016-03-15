@@ -15,8 +15,8 @@
         <provider
             android:name="org.cyanogenmod.themes.provider.ThemesProvider"
             android:authorities="com.mokee.themes"
-            android:readPermission="android.permission.READ_THEMES"
-            android:writePermission="android.permission.WRITE_THEMES"
+            android:readPermission="mokee.permission.READ_THEMES"
+            android:writePermission="mokee.permission.WRITE_THEMES"
             android:exported="true" />
 
         <service android:name=".PreviewGenerationService" >
