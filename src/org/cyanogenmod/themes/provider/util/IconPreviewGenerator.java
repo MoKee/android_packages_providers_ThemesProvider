@@ -120,7 +120,7 @@ public class IconPreviewGenerator {
 
     private ComponentName getDefaultThemesComponentName(Context context) {
         Intent intent = new Intent(Intent.ACTION_MAIN);
-        intent.addCategory("cyanogenmod.intent.category.APP_THEMES");
+        intent.addCategory("mokee.intent.category.APP_THEMES");
         return getDefaultComponentNameForIntent(context, intent);
     }
 

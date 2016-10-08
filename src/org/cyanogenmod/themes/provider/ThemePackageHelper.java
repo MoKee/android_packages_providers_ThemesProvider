@@ -28,16 +28,16 @@ import android.content.res.ThemeConfig;
 import android.database.Cursor;
 import android.util.Log;
 
-import cyanogenmod.providers.ThemesContract;
-import cyanogenmod.providers.ThemesContract.MixnMatchColumns;
-import cyanogenmod.providers.ThemesContract.ThemesColumns;
-import cyanogenmod.providers.ThemesContract.ThemesColumns.InstallState;
-import cyanogenmod.themes.ThemeManager;
-import cyanogenmod.themes.ThemeChangeRequest;
-import cyanogenmod.themes.ThemeChangeRequest.RequestType;
+import mokee.providers.ThemesContract;
+import mokee.providers.ThemesContract.MixnMatchColumns;
+import mokee.providers.ThemesContract.ThemesColumns;
+import mokee.providers.ThemesContract.ThemesColumns.InstallState;
+import mokee.themes.ThemeManager;
+import mokee.themes.ThemeChangeRequest;
+import mokee.themes.ThemeChangeRequest.RequestType;
 
-import org.cyanogenmod.internal.util.CmLockPatternUtils;
-import org.cyanogenmod.internal.util.ThemeUtils;
+import org.mokee.internal.util.MkLockPatternUtils;
+import org.mokee.internal.util.ThemeUtils;
 import org.cyanogenmod.themes.provider.util.ProviderUtils;
 
 import java.io.IOException;
@@ -391,7 +391,7 @@ public class ThemePackageHelper {
             }
         }
 
-        CmLockPatternUtils lockPatternUtils = new CmLockPatternUtils(context);
+        MkLockPatternUtils lockPatternUtils = new MkLockPatternUtils(context);
         if (lockPatternUtils.isThirdPartyKeyguardEnabled()) {
             String[] projection = {MixnMatchColumns.COL_VALUE};
             String selection = MixnMatchColumns.COL_KEY + "=?";

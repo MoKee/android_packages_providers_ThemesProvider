@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="org.cyanogenmod.themes.provider"
-    android:sharedUserId="org.cyanogenmod.themes"
+    android:sharedUserId="org.mokee.themes"
     android:versionCode="2"
     android:versionName="2.0" >
 
-    <uses-permission android:name="cyanogenmod.permission.ACCESS_THEME_MANAGER" />
+    <uses-permission android:name="mokee.permission.ACCESS_THEME_MANAGER" />
 
     <application
         android:allowBackup="true"
@@ -14,9 +14,9 @@
 
         <provider
             android:name="org.cyanogenmod.themes.provider.ThemesProvider"
-            android:authorities="com.cyanogenmod.themes"
-            android:readPermission="cyanogenmod.permission.READ_THEMES"
-            android:writePermission="cyanogenmod.permission.WRITE_THEMES"
+            android:authorities="com.mokee.themes"
+            android:readPermission="mokee.permission.READ_THEMES"
+            android:writePermission="mokee.permission.WRITE_THEMES"
             android:exported="true" />
 
         <service android:name=".PreviewGenerationService" >

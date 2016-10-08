@@ -35,15 +35,15 @@ import android.os.Process;
 import android.preference.PreferenceManager;
 import android.util.Log;
 
-import cyanogenmod.providers.ThemesContract;
-import cyanogenmod.providers.ThemesContract.MixnMatchColumns;
-import cyanogenmod.providers.ThemesContract.PreviewColumns;
-import cyanogenmod.providers.ThemesContract.ThemesColumns;
-import cyanogenmod.themes.ThemeManager;
-import cyanogenmod.themes.ThemeChangeRequest;
-import cyanogenmod.themes.ThemeChangeRequest.RequestType;
+import mokee.providers.ThemesContract;
+import mokee.providers.ThemesContract.MixnMatchColumns;
+import mokee.providers.ThemesContract.PreviewColumns;
+import mokee.providers.ThemesContract.ThemesColumns;
+import mokee.themes.ThemeManager;
+import mokee.themes.ThemeChangeRequest;
+import mokee.themes.ThemeChangeRequest.RequestType;
 
-import org.cyanogenmod.internal.util.ThemeUtils;
+import org.mokee.internal.util.ThemeUtils;
 import org.cyanogenmod.themes.provider.ThemesOpenHelper.MixnMatchTable;
 import org.cyanogenmod.themes.provider.ThemesOpenHelper.PreviewsTable;
 import org.cyanogenmod.themes.provider.ThemesOpenHelper.ThemesTable;

@@ -28,12 +28,12 @@ import android.database.sqlite.SQLiteOpenHelper;
 import android.os.Build;
 import android.util.Log;
 
-import cyanogenmod.providers.ThemesContract;
-import cyanogenmod.providers.ThemesContract.ThemesColumns;
-import cyanogenmod.providers.ThemesContract.MixnMatchColumns;
-import cyanogenmod.providers.ThemesContract.PreviewColumns;
+import mokee.providers.ThemesContract;
+import mokee.providers.ThemesContract.ThemesColumns;
+import mokee.providers.ThemesContract.MixnMatchColumns;
+import mokee.providers.ThemesContract.PreviewColumns;
 
-import org.cyanogenmod.internal.util.ThemeUtils;
+import org.mokee.internal.util.ThemeUtils;
 
 public class ThemesOpenHelper extends SQLiteOpenHelper {
     private static final String TAG = ThemesOpenHelper.class.getName();

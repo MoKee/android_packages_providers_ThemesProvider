@@ -24,9 +24,9 @@ import android.content.res.ThemeConfig;
 import android.graphics.Bitmap;
 import android.text.TextUtils;
 
-import cyanogenmod.providers.ThemesContract.PreviewColumns;
+import mokee.providers.ThemesContract.PreviewColumns;
 
-import org.cyanogenmod.internal.util.ThemeUtils;
+import org.mokee.internal.util.ThemeUtils;
 import org.cyanogenmod.themes.provider.R;
 
 import java.io.IOException;
